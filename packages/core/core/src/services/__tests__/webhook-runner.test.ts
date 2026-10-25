@@ -198,5 +198,22 @@ describe('WebhookRunner', () => {
 
       expect(getRequests()).toEqual([]);
     });
+
+    test('Stops firing an event that was removed from events upon update', async () => {
+      const { runner, emit, getRequests } = setup();
+      const webhook = createWebhook({
+        id: '1',
+        events: ['entry.create', 'entry.update'],
+      });
+      runner.add(webhook);
+
+      runner.update({ ...webhook, events: ['entry.create'] });
+
+      await emit('entry.update', entryEvent(ARTICLE_UID));
+      expect(getRequests()).toEqual([]);
+
+      await emit('entry.create', entryEvent(ARTICLE_UID));
+      expect(getRequests()).toHaveLength(1);
+    });
   });
 });

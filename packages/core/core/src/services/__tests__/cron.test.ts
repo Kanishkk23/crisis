@@ -572,4 +572,31 @@ describe('Cron service', () => {
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
   });
+
+  it('schedules recurrence object rules with 0-indexed months correctly', () => {
+    cron.add({
+      decemberJob: {
+        task: jest.fn(),
+        options: {
+          rule: { month: 11, date: 25, hour: 9, minute: 0 },
+          tz: 'UTC',
+        },
+      },
+      januaryJob: {
+        task: jest.fn(),
+        options: {
+          rule: { month: 0, date: 25, hour: 9, minute: 0 },
+          tz: 'UTC',
+        },
+      },
+    });
+
+    expect(cron.jobs).toHaveLength(2);
+    const decInvocation = cron.jobs[0].job.nextInvocation();
+    const janInvocation = cron.jobs[1].job.nextInvocation();
+    expect(decInvocation).not.toBeNull();
+    expect(janInvocation).not.toBeNull();
+    expect(decInvocation?.getUTCMonth()).toBe(11);
+    expect(janInvocation?.getUTCMonth()).toBe(0);
+  });
 });

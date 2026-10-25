@@ -1,6 +1,7 @@
 import knex from 'knex';
 
 import createQueryBuilder from '../query-builder';
+import { wrapWithDeepSort } from '../helpers/order-by';
 import type { Database } from '../..';
 
 /**
@@ -180,5 +181,16 @@ describe('Status sort with DISTINCT (issue #26746)', () => {
     expect(caseIdx).toBeGreaterThan(-1);
     expect(idIdx).toBeGreaterThan(-1);
     expect(caseIdx).toBeLessThan(idIdx);
+  });
+
+  it('preserves desc direction on relation orderBy columns in wrapWithDeepSort', () => {
+    const { db, uid } = buildDb();
+    const qb = createQueryBuilder(uid, db);
+    qb.state.orderBy = [{ column: 't1.name', order: 'desc' }];
+    qb.state.select = ['id', 'title'];
+    const originalQuery = db.getConnection('articles');
+    const result = wrapWithDeepSort(originalQuery, { db, qb, uid });
+    const sql = result.toSQL().sql.toLowerCase();
+    expect(sql).toContain('desc');
   });
 });

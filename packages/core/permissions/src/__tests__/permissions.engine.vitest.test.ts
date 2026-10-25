@@ -669,5 +669,31 @@ describe('Permissions Engine', () => {
       });
       expect(called).toEqual('beforeRegister');
     });
+
+    it('preserves existing evaluated conditions when before-register hook calls condition.and', async () => {
+      const permissionsToRegister: Permission[] = [
+        {
+          action: 'read',
+          subject: 'article',
+          conditions: ['hasId125'],
+        },
+      ];
+
+      const { ability } = await buildEngineWithAbility({
+        permissions: permissionsToRegister,
+        engineHooks: [
+          {
+            name: 'before-register.permission',
+            fn(context: { condition: { and(clause: unknown): void } }) {
+              context.condition.and({ locale: { $in: ['en'] } });
+            },
+          },
+        ],
+      });
+
+      expect(ability.can('read', subject('article', { id: 125, locale: 'en' }))).toBeTruthy();
+      expect(ability.can('read', subject('article', { id: 999, locale: 'en' }))).toBeFalsy();
+      expect(ability.can('read', subject('article', { id: 125, locale: 'fr' }))).toBeFalsy();
+    });
   });
 });

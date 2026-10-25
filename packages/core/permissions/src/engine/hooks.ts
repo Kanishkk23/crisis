@@ -60,12 +60,6 @@ interface WillRegisterContextParams {
  * @param caslPermission
  */
 const createWillRegisterContext = ({ permission, options }: WillRegisterContextParams) => {
-  // The clauses the permission already carries. Hooks add to them, and the
-  // condition is rebuilt from the collected list on every call.
-  const clauses: unknown[] = Array.isArray(permission.condition?.$or)
-    ? [...permission.condition.$or]
-    : [];
-
   return {
     ...options,
 
@@ -75,23 +69,31 @@ const createWillRegisterContext = ({ permission, options }: WillRegisterContextP
 
     condition: {
       and(rawConditionObject: unknown) {
-        clauses.push(rawConditionObject);
+        if (!permission.condition) {
+          permission.condition = { $and: [] };
+        }
 
-        permission.condition = { $and: clauses };
+        if (Array.isArray(permission.condition.$and)) {
+          permission.condition.$and.push(rawConditionObject);
+        }
 
         return this;
       },
 
       or(rawConditionObject: unknown) {
-        const orClause = clauses.find((clause) => has(clause, '$or'));
-
-        if (orClause && Array.isArray((orClause as { $or: unknown[] }).$or)) {
-          (orClause as { $or: unknown[] }).$or.push(rawConditionObject);
-        } else {
-          clauses.push({ $or: [rawConditionObject] });
+        if (!permission.condition) {
+          permission.condition = { $and: [] };
         }
 
-        permission.condition = { $and: clauses };
+        if (Array.isArray(permission.condition.$and)) {
+          const orClause = permission.condition.$and.find((clause) => has(clause, '$or'));
+
+          if (orClause && Array.isArray((orClause as { $or: unknown[] }).$or)) {
+            (orClause as { $or: unknown[] }).$or.push(rawConditionObject);
+          } else {
+            permission.condition.$and.push({ $or: [rawConditionObject] });
+          }
+        }
 
         return this;
       },

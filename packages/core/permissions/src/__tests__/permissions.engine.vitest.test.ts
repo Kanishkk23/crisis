@@ -328,6 +328,38 @@ describe('Permissions Engine', () => {
     expect(registerFunctions[0]).toBeCalledWith(_.omit(permissions[0], ['conditions']));
   });
 
+  it('combines multiple conditions on an action with $or', async () => {
+    const testPermissions: Permission[] = [
+      {
+        action: 'read',
+        subject: 'article',
+        properties: { fields: ['**'] },
+        conditions: ['hasId125', 'hasId200'],
+      },
+    ];
+
+    const { ability, registerFunctions } = await buildEngineWithAbility({
+      permissions: testPermissions,
+    });
+
+    expect(ability.can('read', subject('article', { id: 125 }))).toBeTruthy();
+    expect(ability.can('read', subject('article', { id: 200 }))).toBeTruthy();
+    expect(ability.can('read', subject('article', { id: 999 }))).toBeFalsy();
+
+    expect(registerFunctions[0]).toBeCalledWith({
+      action: 'read',
+      subject: 'article',
+      properties: { fields: ['**'] },
+      condition: {
+        $and: [
+          {
+            $or: [{ id: 125 }, { id: 200 }],
+          },
+        ],
+      },
+    });
+  });
+
   it('shows correct error messages on unsupported operators', async () => {
     const permissions: Permission[] = [
       {

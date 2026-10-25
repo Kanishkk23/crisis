@@ -110,6 +110,13 @@ describe('generateResponsiveFormats (sequential resizes)', () => {
   });
 });
 
+interface MockSharp {
+  __setNextMetadata(m: { width: number | null; height: number | null; format: string }): void;
+}
+const setNextMetadata = (m: { width: number | null; height: number | null; format: string }) => {
+  (sharp as unknown as MockSharp).__setNextMetadata(m);
+};
+
 describe('generateResponsiveFormats (no toFile when nothing to resize)', () => {
   test('does nothing when responsive dimensions are off', async () => {
     uploadSettings.responsiveDimensions = false;
@@ -134,5 +141,34 @@ describe('generateResponsiveFormats (no toFile when nothing to resize)', () => {
     await imageManipulation.generateResponsiveFormats(testFile);
 
     expect(getToFile()).not.toHaveBeenCalled();
+  });
+});
+
+describe('generateResponsiveFormats (aspect ratios and intermediate dimensions)', () => {
+  test('generates large, medium and small for wide banner (1600x400)', async () => {
+    setNextMetadata({ width: 1600, height: 400, format: 'jpeg' });
+
+    const formats = await imageManipulation.generateResponsiveFormats(testFile);
+
+    expect(formats.map((f) => f?.key)).toEqual(['large', 'medium', 'small']);
+    expect(getToFile()).toHaveBeenCalledTimes(3);
+  });
+
+  test('generates large, medium and small for tall portrait (400x1600)', async () => {
+    setNextMetadata({ width: 400, height: 1600, format: 'jpeg' });
+
+    const formats = await imageManipulation.generateResponsiveFormats(testFile);
+
+    expect(formats.map((f) => f?.key)).toEqual(['large', 'medium', 'small']);
+    expect(getToFile()).toHaveBeenCalledTimes(3);
+  });
+
+  test('skips large but generates medium and small for 900x900', async () => {
+    setNextMetadata({ width: 900, height: 900, format: 'jpeg' });
+
+    const formats = await imageManipulation.generateResponsiveFormats(testFile);
+
+    expect(formats.map((f) => f?.key)).toEqual(['medium', 'small']);
+    expect(getToFile()).toHaveBeenCalledTimes(2);
   });
 });

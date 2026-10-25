@@ -85,10 +85,12 @@ const makeStreamOnlyFile = (
 
 describe('Image manipulation - animated images', () => {
   beforeAll(async () => {
+    sharp.cache(false);
     await fse.ensureDir(tmpDir);
   });
 
   afterAll(async () => {
+    sharp.cache(false);
     await fse.remove(tmpDir);
   });
 

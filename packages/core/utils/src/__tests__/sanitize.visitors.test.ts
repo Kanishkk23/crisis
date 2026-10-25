@@ -433,6 +433,49 @@ describe('Sanitize visitors util', () => {
       expect(set).toHaveBeenCalledTimes(0);
     });
 
+    test('removes regular relation when caller cannot read target, even with inversedBy', async () => {
+      const remove = jest.fn();
+      const set = jest.fn();
+      const bidirectionalAttribute = {
+        type: 'relation',
+        relation: 'manyToMany',
+        target: 'api::category.category',
+        inversedBy: 'articles',
+      };
+
+      global.strapi = {
+        auth: {
+          verify(_auth: unknown, { scope }: { scope: string }) {
+            if (scope === 'api::category.category.find') {
+              throw new Error('Unauthorized');
+            }
+
+            return true;
+          },
+        },
+      } as unknown as typeof strapi;
+
+      await removeRestrictedRelationsFn(
+        {
+          data,
+          key: 'categories',
+          attribute: bidirectionalAttribute,
+          schema: {
+            uid: 'api::article.article',
+            kind: 'collectionType',
+            info: { singularName: 'article', pluralName: 'articles' },
+            attributes: {},
+          },
+          value: {},
+          path: { attribute: null, raw: null },
+        },
+        { remove, set }
+      );
+
+      expect(remove).toHaveBeenCalledWith('categories');
+      expect(set).toHaveBeenCalledTimes(0);
+    });
+
     test('removes unauthorized morphToOne relation targets from output', async () => {
       const remove = jest.fn();
       const set = jest.fn();

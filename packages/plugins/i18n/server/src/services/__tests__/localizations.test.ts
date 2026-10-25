@@ -108,5 +108,31 @@ describe('localizations service', () => {
 
       expect(update).not.toHaveBeenCalled();
     });
+
+    test('Updates non-localized fields on other locales with the target locale filter', async () => {
+      findMany.mockClear();
+      update.mockClear();
+      const entry = { id: 1, documentId: 'Doc1', locale: defaultLocale, title: 'test', stars: 100 };
+
+      await syncNonLocalizedAttributes(entry, model);
+
+      expect(findMany).toHaveBeenCalledWith({
+        where: {
+          documentId: 'Doc1',
+          publishedAt: null,
+          locale: { $ne: defaultLocale },
+        },
+        select: ['locale', 'id'],
+      });
+
+      expect(update).toHaveBeenCalledWith({
+        where: {
+          documentId: 'Doc1',
+          publishedAt: null,
+          locale: { $eq: 'fr' },
+        },
+        data: expect.objectContaining({}),
+      });
+    });
   });
 });
